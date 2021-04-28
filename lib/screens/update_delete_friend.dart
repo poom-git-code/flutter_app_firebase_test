@@ -1,4 +1,10 @@
+import 'dart:io';
+
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_app_firebase_test/services/api_friend.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as Path;
 
 class UpdateDeleteFriend extends StatefulWidget {
 
@@ -20,6 +26,531 @@ class _UpdateDeleteFriendState extends State<UpdateDeleteFriend> {
   TextEditingController nameCtrl = TextEditingController(text: '');
   TextEditingController phoneCtrl = TextEditingController(text: '');
   TextEditingController emailCtrl = TextEditingController(text: '');
+
+  File _image;
+
+  deleteFriend() async{
+    bool result = await apiDeleteFriend(widget.id);
+
+    //ลบไฟล์ออกจาก Storage
+    FirebaseStorage.instance.refFromURL(widget.imagef).delete();
+
+    //นำผลที่ได้จากการทำงานมาตรวจสอบเเล้วแสดง
+    if(result == true){
+      showResultDeleteDialog('ลบข้อมูลเรียบร้อยเเล้ว');
+    }else{
+      showResultDeleteDialog('มีปัญหาในการลบข้อมูลกรุณารองใหม่อีกครั้ง');
+    }
+  }
+
+  showSelectImageFromCamera() async {
+    PickedFile imageFile = await ImagePicker().getImage(
+      source: ImageSource.camera,
+      imageQuality: 75,
+    );
+    if (imageFile == null) return;
+    setState(() {
+      _image = File(imageFile.path);
+    });
+  }
+
+  showSelectImageFormGallery() async {
+    PickedFile imageFile = await ImagePicker().getImage(
+      source: ImageSource.gallery,
+      imageQuality: 75,
+    );
+    if (imageFile == null) return;
+    setState(() {
+      _image = File(imageFile.path);
+    });
+  }
+
+  showBottomSheetForSelectImage(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: 16.0,
+            horizontal: 28.0,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    showSelectImageFromCamera();
+                  },
+                  style: TextButton.styleFrom(
+                    primary: Colors.pink,
+                  ),
+                  icon: Icon(Icons.camera_alt),
+                  label: Text('กล้อง'),
+                ),
+              ),
+              SizedBox(
+                width: 16.0,
+              ),
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    showSelectImageFormGallery();
+                  },
+                  style: TextButton.styleFrom(
+                    primary: Colors.deepPurpleAccent,
+                  ),
+                  icon: Icon(Icons.camera),
+                  label: Text('แกลอรี่'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  showResultDeleteDialog(String msg) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: Center(
+            child: Container(
+              width: double.infinity,
+              color: Color(0xFFEC4646),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  vertical: 8.0,
+                ),
+                child: Text(
+                  'ผลการทำงาน',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                msg,
+              ),
+              Padding(
+                padding: EdgeInsets.only(
+                  top: 16.0,
+                  left: 32.0,
+                  right: 32.0,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).popUntil((route) => route.isFirst);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          primary: Colors.green,
+                          padding: EdgeInsets.symmetric(
+                            vertical: 12.0,
+                          ),
+                        ),
+                        child: Text(
+                          'ตกลง',
+                          style: TextStyle(
+                            fontSize: 16.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  showConfirmDeleteDialog() async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: Center(
+            child: Container(
+              width: double.infinity,
+              color: Color(0xFFEC4646),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  vertical: 8.0,
+                ),
+                child: Text(
+                  'ยืนยัน',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'ต้องการบลบข้อมูลหรือไม่ ?',
+                style: TextStyle(),
+              ),
+              Padding(
+                padding: EdgeInsets.only(
+                  top: 16.0,
+                  left: 32.0,
+                  right: 32.0,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          deleteFriend();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          primary: Colors.green,
+                          padding: EdgeInsets.symmetric(
+                            vertical: 12.0,
+                          ),
+                        ),
+                        child: Text(
+                          'ตกลง',
+                          style: TextStyle(
+                            fontSize: 16.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 16.0,
+                    ),
+                    Expanded(
+                      flex: 1,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          primary: Colors.red,
+                          padding: EdgeInsets.symmetric(
+                            vertical: 12.0,
+                          ),
+                        ),
+                        child: Text(
+                          'ยกเลิก',
+                          style: TextStyle(
+                            fontSize: 16.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  showWarningDialog(String msg) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: Center(
+            child: Container(
+              width: double.infinity,
+              color: Color(0xFFEC4646),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  vertical: 8.0,
+                ),
+                child: Text(
+                  'คำเตือน',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                msg,
+              ),
+              Padding(
+                padding: EdgeInsets.only(
+                  top: 16.0,
+                  left: 32.0,
+                  right: 32.0,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          primary: Colors.green,
+                          padding: EdgeInsets.symmetric(
+                            vertical: 12.0,
+                          ),
+                        ),
+                        child: Text(
+                          'ตกลง',
+                          style: TextStyle(
+                            fontSize: 16.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  showConfirmUpdateDialog() async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: Center(
+            child: Container(
+              width: double.infinity,
+              color: Color(0xFFEC4646),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  vertical: 8.0,
+                ),
+                child: Text(
+                  'ยืนยัน',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'ต้องการบันทึกข้อมูลที่แก้ไขหรือไม่ ?',
+                style: TextStyle(),
+              ),
+              Padding(
+                padding: EdgeInsets.only(
+                  top: 16.0,
+                  left: 32.0,
+                  right: 32.0,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          updateFriend();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          primary: Colors.green,
+                          padding: EdgeInsets.symmetric(
+                            vertical: 12.0,
+                          ),
+                        ),
+                        child: Text(
+                          'ตกลง',
+                          style: TextStyle(
+                            fontSize: 16.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 16.0,
+                    ),
+                    Expanded(
+                      flex: 1,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          primary: Colors.red,
+                          padding: EdgeInsets.symmetric(
+                            vertical: 12.0,
+                          ),
+                        ),
+                        child: Text(
+                          'ยกเลิก',
+                          style: TextStyle(
+                            fontSize: 16.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  ShowResultUpdateDialog(String msg) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: Center(
+            child: Container(
+              width: double.infinity,
+              color: Color(0xFFEC4646),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  vertical: 8.0,
+                ),
+                child: Text(
+                  'ผลการทำงาน',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                msg,
+              ),
+              Padding(
+                padding: EdgeInsets.only(
+                  top: 16.0,
+                  left: 32.0,
+                  right: 32.0,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).popUntil((route) => route.isFirst);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          primary: Colors.green,
+                          padding: EdgeInsets.symmetric(
+                            vertical: 12.0,
+                          ),
+                        ),
+                        child: Text(
+                          'ตกลง',
+                          style: TextStyle(
+                            fontSize: 16.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  updateFriend() async{
+    if(_image != null){
+      //อัปโหลดรูปรูปไปไว้ที่ storage ของ Firebase เพราะเราต้องการตำแหน่งรูปมาใช้เพื่อเก็บใน firestore
+      //ชื่อรูป
+      String imageName = Path.basename(_image.path);
+
+      //อัปโหลดรุปไปที่ storage ที่ firebase
+      Reference ref =  FirebaseStorage.instance.ref().child('imageFried/' + imageName);
+      UploadTask uploadTask = ref.putFile(_image);
+      //เมื่ออัปโหลดรูปเสร็จเราจะได้ที่อยู่ของรูป แล้วเราก็จะส่งที่อยู่อยู่ของรูปไปพร้อมกับข้อมูลอื่นๆ ไปเก็บที่ Firestore Database ของ Firebase
+      uploadTask.whenComplete(() async{
+        String imgeUrl = await ref.getDownloadURL();
+
+        //ทำการอัปโหลดที่อยู่ของรูปพร้อมกับข้อมูลอื่นๆ โดยจะเรียกใช้ api mujgiklihk'w;h
+        bool resultInsertFriend = await apiUpdateFriend(
+            widget.id,
+            nameCtrl.text.trim(),
+            phoneCtrl.text.trim(),
+            emailCtrl.text.trim(),
+            imgeUrl
+        );
+        if(resultInsertFriend == true)
+        {
+          ShowResultUpdateDialog("บันทึกเการแก้ไขเรียบร้อยเเล้ว");
+        }
+        else
+        {
+          ShowResultUpdateDialog("พบปัญหาในการทำงานกรุณาลองใหม่อีกครั้ง");
+        }
+      });
+    }else{
+      bool resultInsertFriend = await apiUpdateFriend(
+          widget.id,
+          nameCtrl.text.trim(),
+          phoneCtrl.text.trim(),
+          emailCtrl.text.trim(),
+          widget.imagef
+      );
+      if(resultInsertFriend == true)
+      {
+        ShowResultUpdateDialog("บันทึกเการแก้ไขเรียบร้อยเเล้ว");
+      }
+      else
+      {
+        ShowResultUpdateDialog("พบปัญหาในการทำงานกรุณาลองใหม่อีกครั้ง");
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -74,7 +605,14 @@ class _UpdateDeleteFriendState extends State<UpdateDeleteFriend> {
                       child: SizedBox(
                         width: 180.0,
                         height: 180.0,
-                        child: FadeInImage.assetNetwork(
+                        child: _image != null
+                        ?
+                            Image.file(
+                              _image,
+                              fit: BoxFit.cover,
+                            )
+                        :
+                        FadeInImage.assetNetwork(
                           placeholder: 'assets/images/friend.png',
                           image: widget.imagef,
                           fit: BoxFit.cover,
@@ -86,7 +624,7 @@ class _UpdateDeleteFriendState extends State<UpdateDeleteFriend> {
                     padding: EdgeInsets.only(top: 60.0),
                     child: IconButton(
                       onPressed: () {
-                        //showBottomSheetForSelectImage(context);
+                        showBottomSheetForSelectImage(context);
                       },
                       icon: Icon(
                         Icons.add_a_photo,
@@ -168,7 +706,13 @@ class _UpdateDeleteFriendState extends State<UpdateDeleteFriend> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-
+                          if (nameCtrl.text.trim().length == 0) {
+                            showWarningDialog('ป้อนชื่อด้วย');
+                          } else if (phoneCtrl.text.trim().length == 0) {
+                            showWarningDialog('ป้อนเบอร์โทรด้วย');
+                          } else {
+                            showConfirmUpdateDialog();
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           primary: Colors.green,
@@ -190,10 +734,7 @@ class _UpdateDeleteFriendState extends State<UpdateDeleteFriend> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          setState(() {
-
-                          });
-
+                          showConfirmDeleteDialog();
                         },
                         style: ElevatedButton.styleFrom(
                           primary: Colors.red,
